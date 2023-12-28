@@ -1,0 +1,6 @@
+cmake -S ./ -B ./tmp
+cd ./tmp
+make
+mv ./solution ./../solution
+cd ./..
+rm -r ./tmp
