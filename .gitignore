@@ -33,3 +33,10 @@
 
 *.txt
 solution
+tmp/*
+*.bin
+input.txt
+
+compiler
+virtual_machine
+.vscode/*

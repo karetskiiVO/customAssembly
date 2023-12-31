@@ -1,6 +1,7 @@
 cmake -S ./ -B ./tmp
 cd ./tmp
 make
-mv ./solution ./../solution
+mv ./compiler ./../compiler
+mv  ./virtual_machine ./../virtual_machine
 cd ./..
-rm -r ./tmp
+#rm -r ./tmp
