@@ -82,6 +82,8 @@ static void add (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip
 static void mov (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
     auto& registers = vm.registers;
     RIP = nextrip;
+
+    if (args[0] == args[1]) return;
     memcpy(args[0], args[1], size);
 }
 
@@ -109,8 +111,8 @@ void VirtualMachine::run () {
     auto instrArgc = instructionArgc();
 
     while (true) {
-        uint16_t command     = (*(uint16_t*)(ram + RIP)) & ((1 << 14) - 1);
-        uint8_t commandsize  = 1 << (((uint16_t*)ram)[RIP] >> 14);
+        uint16_t command    = (*(uint16_t*)(ram + RIP)) & ((1 << 14) - 1);
+        uint8_t commandsize = 1 << ((*(uint16_t*)(ram + RIP)) >> 14);
 
         size_t bufferip = RIP + sizeof(uint16_t);
         void* args[MAX_ARGC];

@@ -31,7 +31,7 @@ const std::vector<Opcode> assemblyOpcodes =
         { "add", INSTR_ADD, {ARG_VAR, ARG_ANY}},
 
         { "mov", INSTR_MOV, {ARG_VAR, ARG_ANY}},
-        { "syscall", INSTR_SYSCALL, {}},
+        { "syscall", INSTR_SYSCALL, {}, false},
     };
 const std::vector<Register> assemblyRegisters = 
     {

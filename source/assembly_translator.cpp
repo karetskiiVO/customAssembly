@@ -94,8 +94,23 @@ static void tryCommand (NotLinkedModule& currentModule, const std::vector<TXTpro
     Command newCommand;
     newCommand.commandid = currentOpcode.commandid;
 
-    bool isFirst = true;
+    // set size modifier to instruction
+    if (currentOpcode.modifySize) {
+        const std::map<std::string, uint8_t> sizeModifier = 
+            {
+                {"byte", 1}, {"word", 2}, {"dword", 4}, {"qword", 8}
+            };
+        
+        auto it = sizeModifier.find(code[idx]);
+        if (it != sizeModifier.end()) {
+            newCommand.size = it->second;
+            idx++;
+        }
+    } else {
+        newCommand.size = 8;
+    }
 
+    bool isFirst = true;
     for (auto argType : currentOpcode.argumentsType) {
         if (!isFirst) {
             if (static_cast<std::string>(code[idx]) != ",") throw compilerError();
@@ -171,4 +186,3 @@ std::vector<uint8_t> Assembly::compileFromTokens (const std::vector<TXTproc::Tok
 
     return linkModules({translateModuleFromTokens(code)});
 }
-

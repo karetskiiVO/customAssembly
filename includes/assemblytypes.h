@@ -22,6 +22,8 @@ struct Opcode {
     std::string name;
     commandid_t commandid;
     std::vector<Argtype> argumentsType;
+
+    bool modifySize = true;
 };
 
 struct Register {
