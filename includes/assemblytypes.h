@@ -31,26 +31,28 @@ struct Register {
     regid_t regid;
 };
 
-struct Lable {
-    std::string address;
-};
-
 struct Argument {
     Argtype type;
 
     std::vector<std::pair<int8_t, Register>> registers;
-    int64_t constantOffset;
-    std::vector<std::pair<int8_t, Lable>> nonconstantOffset;
+    std::vector<int64_t> constantOffset;
+    std::vector<std::pair<int64_t, std::string>> nonconstantOffset;
     
     Register reg;
-    int64_t constant;
-    
+};
+
+struct PseudoArgument {
+    std::string stringBuffer;
 };
 
 struct Command {
     commandid_t commandid;
+    
     uint8_t size = 8;
     std::vector<Argument> args;
+
+    bool isPseudo = false;
+    PseudoArgument pseudoArg;
 };
 
 struct NotLinkedAddress {
@@ -59,7 +61,6 @@ struct NotLinkedAddress {
 
 struct NotLinkedModule {
     std::vector<Command> code;
-    std::vector<uint8_t> data;
 };
 
 }

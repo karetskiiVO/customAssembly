@@ -10,8 +10,6 @@ int main () {
     size_t programmSize;
     fread(&programmSize, sizeof(size_t), 1, input);
 
-    //std::cout << programmSize << "\n";
-
     std::vector<uint8_t> programm(programmSize);
     fread(programm.data(), sizeof(uint8_t), programmSize, input);
     fclose(input);    

@@ -24,14 +24,22 @@ enum InstructionID {
     INSTR_ADD = 0x00,
     INSTR_MOV = 0x30,
     INSTR_SYSCALL = 0xFF,
+    INSTR_JMP = 0x11,
+
+    PSEVDO_INSTR_ADD_LABLE   =  0xF01,
+    PSEVDO_INSTR_PLACE_BYTES =  0xF02,
 };
 
 const std::vector<Opcode> assemblyOpcodes = 
     {
         { "add", INSTR_ADD, {ARG_VAR, ARG_ANY}},
-
         { "mov", INSTR_MOV, {ARG_VAR, ARG_ANY}},
+
+        { "jmp", INSTR_JMP, {ARG_ANY}, false},
+
         { "syscall", INSTR_SYSCALL, {}, false},
+
+
     };
 const std::vector<Register> assemblyRegisters = 
     {

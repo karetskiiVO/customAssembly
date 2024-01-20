@@ -23,7 +23,7 @@ int main () {
     auto tokens = createTokens(text, terminals);
     
     auto bin = Assembly::compileFromTokens(tokens);
-    size_t size= bin.size();
+    size_t size = bin.size();
 
     FILE* output = fopen("prog.bin", "wb");
     fwrite(&size, sizeof(size_t), 1, output);

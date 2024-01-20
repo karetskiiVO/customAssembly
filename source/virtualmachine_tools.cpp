@@ -87,6 +87,11 @@ static void mov (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip
     memcpy(args[0], args[1], size);
 }
 
+static void jmp (VirtualMachine& vm, void** args, uint8_t size, uint64_t) {
+    auto& registers = vm.registers;
+    memcpy(&RIP, args[0], size);
+}
+
 static void syscall (VirtualMachine& vm, void**, uint8_t, uint64_t nextrip) {
     auto& registers = vm.registers;
     
@@ -105,6 +110,7 @@ void VirtualMachine::run () {
         {
             {Assembly::INSTR_ADD, add}, 
             {Assembly::INSTR_MOV, mov},
+            {Assembly::INSTR_JMP, jmp},
             {Assembly::INSTR_SYSCALL, syscall},
         };
     

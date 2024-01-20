@@ -2,6 +2,6 @@ cmake -S ./ -B ./tmp
 cd ./tmp
 make
 mv ./compiler ./../compiler
-mv  ./virtual_machine ./../virtual_machine
+mv  ./virtual_machine ./../delta_vm
 cd ./..
 #rm -r ./tmp

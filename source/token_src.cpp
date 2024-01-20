@@ -9,6 +9,8 @@ using namespace TXTproc;
 
 Token::Token (const std::string& content, size_t line, size_t column) :
     content_(content), line(line), column(column) {}
+Token::Token (const char* ptr2content, size_t line, size_t column) :
+    content_(ptr2content), line(line), column(column) {}
 
 Token::operator std::string () {
     return content_;

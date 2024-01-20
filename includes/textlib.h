@@ -34,6 +34,7 @@ public:
     static constexpr size_t UnknownPosition () { return (size_t)-1; }
 
     Token (const std::string& content, size_t line = UnknownPosition(), size_t column = UnknownPosition());
+    Token (const char* ptr2content, size_t line = UnknownPosition(), size_t column = UnknownPosition());
 
     operator std::string ();
     operator const std::string () const;

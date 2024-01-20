@@ -61,6 +61,31 @@ static std::map<std::string, Register> setRegisters () {
 const std::map<std::string, Register> registers = setRegisters ();
 const std::map<std::string, Opcode>   opcodes   = setOpcodes();
 
+static void getExpression (Argtype, Argument& argument, const std::vector<TXTproc::Token>& code, size_t& idx) {
+    try {
+        argument.constantOffset.push_back(std::stoll(code[idx]));
+        idx++;
+    } catch (...) {
+        argument.nonconstantOffset.push_back({1, code[idx]});
+        idx++;
+    }
+
+    argument.type = ARG_CST;
+
+    while (code[idx] == "+") {
+        idx++;
+        try {
+            argument.constantOffset.push_back(std::stoll(code[idx]));
+            idx++;
+            
+            argument.type = ARG_CST;
+        } catch (...) {
+            argument.nonconstantOffset.push_back({1, code[idx]});
+            idx++;
+        }
+    }
+}
+
 static void getArgument (Argtype argtype, Argument& argument, const std::vector<TXTproc::Token>& code, size_t& idx) {
     if (argtype & ARG_REG) {
         auto it = registers.find(code[idx]);
@@ -73,13 +98,8 @@ static void getArgument (Argtype argtype, Argument& argument, const std::vector<
     }
 
     if (argtype & ARG_CST) {
-        try {
-            argument.constant = std::stoll(code[idx]);
-            idx++;
-            
-            argument.type = ARG_CST;
-            return;
-        } catch (...) {}
+        getExpression(argtype, argument, code, idx);
+        return;
     }
 
     throw compilerError();
@@ -126,12 +146,26 @@ static void tryCommand (NotLinkedModule& currentModule, const std::vector<TXTpro
     currentModule.code.push_back(newCommand);
 }
 
+static void tryLable   (NotLinkedModule& currentModule, const std::vector<TXTproc::Token>& code, size_t& idx) {
+    if (idx + 2 > code.size()) return;
+    if (code[idx + 1] != ":")  return;
+
+    Command newPseudoCommand;
+    newPseudoCommand.isPseudo = true;
+    newPseudoCommand.commandid = PSEVDO_INSTR_ADD_LABLE;
+    newPseudoCommand.pseudoArg.stringBuffer = code[idx];
+    idx += 2;
+
+    currentModule.code.push_back(newPseudoCommand);
+}
+
 NotLinkedModule Assembly::translateModuleFromTokens (const std::vector<TXTproc::Token>& code)  {
     NotLinkedModule res;
 
     for (size_t idx = 0; idx < code.size();) {
         size_t previdx = idx;
 
+        tryLable(res, code, idx);
         tryCommand(res, code, idx);
 
         if (previdx == idx) throw compilerError();
@@ -153,8 +187,28 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
     const uint16_t logSize[] = {0, 0, 1, 1, 
                                 2, 2, 2, 2, 3};
 
-    for (const auto& currentModule : modules) {
+    std::vector<std::map<std::string, uint64_t>> lableTable(modules.size());
+
+    for (size_t moduleidx = 0; moduleidx < modules.size(); moduleidx++) {
+        const auto& currentModule = modules[moduleidx];
         for (const auto& command : currentModule.code) {
+            if (command.isPseudo) {
+                switch (command.commandid) {
+                    case PSEVDO_INSTR_ADD_LABLE:
+                        if (lableTable[moduleidx].find(command.pseudoArg.stringBuffer) != lableTable[moduleidx].end()) {
+                            throw compilerError();
+                        }
+                        
+                        lableTable[moduleidx][command.pseudoArg.stringBuffer] = res.size();
+
+                        break;
+                    default:
+                        break;
+                }
+
+                continue;
+            }
+
             addToUintArray(res, (uint16_t)(command.commandid | (logSize[command.size] << 14)));
 
             for (const auto& arg : command.args) {
@@ -166,7 +220,45 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                         break;
                     case ARG_CST:
                         addToUintArray(res, (uint8_t)COMMAND_ARG_CST);
-                        addToUintArray(res, arg.constant);
+                        addToUintArray(res,  (int64_t)0);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    res.clear();
+
+    for (size_t moduleidx = 0; moduleidx < modules.size(); moduleidx++) {
+        const auto& currentModule = modules[moduleidx];
+        for (const auto& command : currentModule.code) {
+            if (command.isPseudo) continue;
+            
+            addToUintArray(res, (uint16_t)(command.commandid | (logSize[command.size] << 14)));
+
+            for (const auto& arg : command.args) {
+                int64_t currentOffset = 0;
+                switch (arg.type) {
+                    case ARG_REG:
+                        addToUintArray(res, (uint8_t)(arg.reg.regid | COMMAND_ARG_REG));
+                        break;
+                    case ARG_MEM:
+                        break;
+                    case ARG_CST:
+                        addToUintArray(res, (uint8_t)COMMAND_ARG_CST);
+                        
+                        for (auto offset : arg.constantOffset) currentOffset += offset;
+                        for (auto lable : arg.nonconstantOffset) {
+                            if (lableTable[moduleidx].find(lable.second) == lableTable[moduleidx].end()) {
+                                throw compilerError();
+                            }
+
+                            currentOffset += lable.first * lableTable[moduleidx][lable.second];
+                        }
+
+                        addToUintArray(res, currentOffset);
                         break;
                     default:
                         break;

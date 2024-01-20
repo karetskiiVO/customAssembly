@@ -38,5 +38,5 @@ tmp/*
 input.txt
 
 compiler
-virtual_machine
+delta_vm
 .vscode/*
