@@ -20,7 +20,15 @@ static void* getArgument (VirtualMachine& vm, uint64_t& ip) {
             ip += sizeof(uint64_t);
             break;
         case Assembly::COMMAND_ARG_MEM:
-            // memory
+            res = vm.ram;
+            for (uint8_t regCnt = 0; regCnt < (argDt & (~(0b11 << 6))); regCnt++) {
+                uint8_t regid = *((uint8_t*)vm.ram + ip) & (~(0b11 << 6));
+                uint8_t mult  = 1 << (*((uint8_t*)vm.ram + ip) >> 6);
+                res = (uint8_t*)res + vm.registers[regid] * mult;
+                ip += sizeof(uint8_t);
+            }
+            res = (uint8_t*)res + *(uint64_t*)((uint8_t*)vm.ram + ip);
+            ip += sizeof(uint64_t);
             break;
         case Assembly::COMMAND_ARG_REG:
             res = vm.registers + (argDt & (~(0b11 << 6)));

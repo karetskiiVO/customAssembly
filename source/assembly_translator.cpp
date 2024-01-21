@@ -58,29 +58,43 @@ static std::map<std::string, Register> setRegisters () {
     return res;
 }
 
-const std::map<std::string, Register> registers = setRegisters ();
+const std::map<std::string, Register> registers = setRegisters();
 const std::map<std::string, Opcode>   opcodes   = setOpcodes();
 
-static void getExpression (Argtype, Argument& argument, const std::vector<TXTproc::Token>& code, size_t& idx) {
-    try {
-        argument.constantOffset.push_back(std::stoll(code[idx]));
-        idx++;
-    } catch (...) {
-        argument.nonconstantOffset.push_back({1, code[idx]});
-        idx++;
-    }
+static void getExpression (Argtype, Argument& argument, const std::vector<TXTproc::Token>& code, size_t& idx, bool useRegs) {
+    bool startFlag = true;
 
-    argument.type = ARG_CST;
+    while (startFlag || code[idx] == "+" || code[idx] == "-") {
+        int64_t multiplier = 1;
+        startFlag = false;
 
-    while (code[idx] == "+") {
-        idx++;
+        if (code[idx] == "+" || code[idx] == "-") {
+            multiplier = (code[idx] == "+") ? 1 : -1;
+            idx++;
+        }
+
         try {
             argument.constantOffset.push_back(std::stoll(code[idx]));
             idx++;
-            
-            argument.type = ARG_CST;
         } catch (...) {
-            argument.nonconstantOffset.push_back({1, code[idx]});
+            auto registerIt = registers.find(code[idx]);
+            if (registerIt != registers.end()) {
+                if (!useRegs) throw compilerError();
+
+                switch (multiplier) {
+                    case 1:
+                    case 2:
+                    case 4:
+                    case 8:
+                        argument.registers.push_back({multiplier, registerIt->second});
+                        break;
+                    default:
+                        throw compilerError();
+                }
+            } else {
+                argument.nonconstantOffset.push_back({multiplier, code[idx]});
+            }
+
             idx++;
         }
     }
@@ -97,8 +111,20 @@ static void getArgument (Argtype argtype, Argument& argument, const std::vector<
         }
     }
 
+    if (argtype & ARG_MEM) {
+        if (code[idx] == "[") {
+            idx++;
+            argument.type = ARG_MEM;
+            getExpression(argtype, argument, code, idx, true);
+            if (code[idx] != "]") throw compilerError();
+            idx++;
+            return;
+        }
+    }
+
     if (argtype & ARG_CST) {
-        getExpression(argtype, argument, code, idx);
+        argument.type = ARG_CST;
+        getExpression(argtype, argument, code, idx, false);
         return;
     }
 
@@ -217,6 +243,12 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                         addToUintArray(res, (uint8_t)(arg.reg.regid | COMMAND_ARG_REG));
                         break;
                     case ARG_MEM:
+                        // check for maximum register counter
+                        addToUintArray(res, (uint8_t)(arg.registers.size() | COMMAND_ARG_MEM));
+                        for (auto regPair : arg.registers) {
+                            addToUintArray(res, (uint8_t)(regPair.second.regid | (logSize[regPair.first] << 6)));
+                        }
+                        addToUintArray(res,  (int64_t)0);
                         break;
                     case ARG_CST:
                         addToUintArray(res, (uint8_t)COMMAND_ARG_CST);
@@ -245,6 +277,21 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                         addToUintArray(res, (uint8_t)(arg.reg.regid | COMMAND_ARG_REG));
                         break;
                     case ARG_MEM:
+                        addToUintArray(res, (uint8_t)(arg.registers.size() | COMMAND_ARG_MEM));
+                        for (auto regPair : arg.registers) {
+                            addToUintArray(res, (uint8_t)(regPair.second.regid | (logSize[regPair.first] << 6)));
+                        }
+
+                        for (auto offset : arg.constantOffset) currentOffset += offset;
+                        for (auto lable : arg.nonconstantOffset) {
+                            if (lableTable[moduleidx].find(lable.second) == lableTable[moduleidx].end()) {
+                                throw compilerError();
+                            }
+
+                            currentOffset += lable.first * lableTable[moduleidx][lable.second];
+                        }
+
+                        addToUintArray(res, currentOffset);
                         break;
                     case ARG_CST:
                         addToUintArray(res, (uint8_t)COMMAND_ARG_CST);

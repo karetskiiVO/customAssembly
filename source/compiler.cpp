@@ -17,7 +17,7 @@ int main () {
     std::vector<Token> terminals = {
         Token(" "), Token("\t"), Token("\n"), Token("\r"),
         Token("+"), Token("-"), Token("*"), Token("/"), 
-        Token(":"), Token(";"), Token(",")
+        Token(":"), Token(";"), Token(","), Token("["), Token("]")
     };
     
     auto tokens = createTokens(text, terminals);
