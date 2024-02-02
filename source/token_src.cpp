@@ -7,10 +7,10 @@
 
 using namespace TXTproc;
 
-Token::Token (const std::string& content, size_t line, size_t column) :
-    content_(content), line(line), column(column) {}
-Token::Token (const char* ptr2content, size_t line, size_t column) :
-    content_(ptr2content), line(line), column(column) {}
+Token::Token (const std::string& content, size_t line, size_t column, const std::string& filename) :
+    content_(content), line(line), column(column), filename_(filename) {}
+Token::Token (const char* ptr2content, size_t line, size_t column, const std::string& filename) :
+    content_(ptr2content), line(line), column(column), filename_(filename) {}
 
 Token::operator std::string () {
     return content_;
@@ -24,6 +24,13 @@ std::string& Token::content () {
 }
 const std::string& Token::content () const {
     return content_;
+}
+
+std::string& Token::filename () {
+    return filename_;
+}
+const std::string& Token::filename () const {
+    return filename_;
 }
 
 size_t Token::getLine   () const { return   line; }

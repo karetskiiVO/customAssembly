@@ -9,8 +9,23 @@
 using namespace TXTproc;
 using namespace Assembly;
 
-class compilerError {};
-class failedAttempt {};
+class compilerError {
+    Token failedToken;
+    std::string message;
+public:
+    compilerError (const Token& failedToken, const std::string& message) 
+        : failedToken(failedToken), message(message) {}
+
+    const Token& getFailed () const {
+        return failedToken;
+    }
+
+    const std::string& getMessage () const {
+        return message;
+    }
+};
+
+class linkerError {};
 
 static std::vector<TXTproc::Token> removeComments (const std::vector<TXTproc::Token>& code) {
     bool inComment = false;
@@ -79,7 +94,7 @@ static void getExpression (Argtype, Argument& argument, const std::vector<TXTpro
         } catch (...) {
             auto registerIt = registers.find(code[idx]);
             if (registerIt != registers.end()) {
-                if (!useRegs) throw compilerError();
+                if (!useRegs) throw compilerError(code[idx], "using of non-constant exprression is not allowed");
 
                 switch (multiplier) {
                     case 1:
@@ -89,7 +104,7 @@ static void getExpression (Argtype, Argument& argument, const std::vector<TXTpro
                         argument.registers.push_back({multiplier, registerIt->second});
                         break;
                     default:
-                        throw compilerError();
+                        throw compilerError(code[idx], "incorrect register multiplier");
                 }
             } else {
                 argument.nonconstantOffset.push_back({multiplier, code[idx]});
@@ -100,7 +115,7 @@ static void getExpression (Argtype, Argument& argument, const std::vector<TXTpro
     }
 }
 
-static void getArgument (Argtype argtype, Argument& argument, const std::vector<TXTproc::Token>& code, size_t& idx) {
+static void getArgument   (Argtype argtype, Argument& argument, const std::vector<TXTproc::Token>& code, size_t& idx) {
     if (argtype & ARG_REG) {
         auto it = registers.find(code[idx]);
         if (it != registers.end()) {
@@ -116,7 +131,7 @@ static void getArgument (Argtype argtype, Argument& argument, const std::vector<
             idx++;
             argument.type = ARG_MEM;
             getExpression(argtype, argument, code, idx, true);
-            if (code[idx] != "]") throw compilerError();
+            if (code[idx] != "]") throw compilerError(code[idx], "\"]\" expected");
             idx++;
             return;
         }
@@ -128,10 +143,23 @@ static void getArgument (Argtype argtype, Argument& argument, const std::vector<
         return;
     }
 
-    throw compilerError();
+    throw compilerError(code[idx], "invalid argument");
 }
 
-static void tryCommand (NotLinkedModule& currentModule, const std::vector<TXTproc::Token>& code, size_t& idx) {
+static void tryLable     (NotLinkedModule& currentModule, const std::vector<TXTproc::Token>& code, size_t& idx) {
+    if (idx + 2 > code.size()) return;
+    if (code[idx + 1] != ":")  return;
+
+    Command newPseudoCommand;
+    newPseudoCommand.isPseudo = true;
+    newPseudoCommand.commandid = PSEVDO_INSTR_ADD_LABLE;
+    newPseudoCommand.pseudoArg.stringBuffer = code[idx];
+    idx += 2;
+
+    currentModule.code.push_back(newPseudoCommand);
+}
+
+static void tryCommand   (NotLinkedModule& currentModule, const std::vector<TXTproc::Token>& code, size_t& idx) {
     auto it = opcodes.find(code[idx]);
     if (it == opcodes.end()) return;
     
@@ -159,7 +187,7 @@ static void tryCommand (NotLinkedModule& currentModule, const std::vector<TXTpro
     bool isFirst = true;
     for (auto argType : currentOpcode.argumentsType) {
         if (!isFirst) {
-            if (static_cast<std::string>(code[idx]) != ",") throw compilerError();
+            if (code[idx] != ",") throw compilerError(code[idx], "\",\" expected");
             idx++;
         }
         
@@ -172,17 +200,30 @@ static void tryCommand (NotLinkedModule& currentModule, const std::vector<TXTpro
     currentModule.code.push_back(newCommand);
 }
 
-static void tryLable   (NotLinkedModule& currentModule, const std::vector<TXTproc::Token>& code, size_t& idx) {
-    if (idx + 2 > code.size()) return;
-    if (code[idx + 1] != ":")  return;
+static void tryDirective (NotLinkedModule& currentModule, const std::vector<TXTproc::Token>& code, size_t& idx) {
+    if (code[idx] == "global") {
+        idx++;
 
-    Command newPseudoCommand;
-    newPseudoCommand.isPseudo = true;
-    newPseudoCommand.commandid = PSEVDO_INSTR_ADD_LABLE;
-    newPseudoCommand.pseudoArg.stringBuffer = code[idx];
-    idx += 2;
+        currentModule.code.push_back(Assembly::Command());
+        currentModule.code.back().isPseudo  = true;
+        currentModule.code.back().commandid = PSEVDO_INSTR_GLB_LABLE;
+        currentModule.code.back().pseudoArg.stringBuffer = code[idx];
+        
+        idx++;
+        return;
+    }
 
-    currentModule.code.push_back(newPseudoCommand);
+    if (code[idx] == "extern") {
+        idx++;
+
+        currentModule.code.push_back(Assembly::Command());
+        currentModule.code.back().isPseudo  = true;
+        currentModule.code.back().commandid = PSEVDO_INSTR_EXT_LABLE;
+        currentModule.code.back().pseudoArg.stringBuffer = code[idx];
+        
+        idx++;
+        return;
+    }
 }
 
 NotLinkedModule Assembly::translateModuleFromTokens (const std::vector<TXTproc::Token>& code)  {
@@ -191,10 +232,11 @@ NotLinkedModule Assembly::translateModuleFromTokens (const std::vector<TXTproc::
     for (size_t idx = 0; idx < code.size();) {
         size_t previdx = idx;
 
+        tryDirective(res, code, idx);
         tryLable(res, code, idx);
         tryCommand(res, code, idx);
 
-        if (previdx == idx) throw compilerError();
+        if (previdx == idx) throw compilerError(code[idx], "command or lable  is expected");
     }
 
     return res;
@@ -214,19 +256,29 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                                 2, 2, 2, 2, 3};
 
     std::vector<std::map<std::string, uint64_t>> lableTable(modules.size());
+    std::vector<std::vector<std::string>> externedLables(modules.size());
+    std::map<std::string, uint64_t> globalLables;
 
     for (size_t moduleidx = 0; moduleidx < modules.size(); moduleidx++) {
         const auto& currentModule = modules[moduleidx];
+        std::vector<std::string> newGlobalLables;
+
         for (const auto& command : currentModule.code) {
             if (command.isPseudo) {
                 switch (command.commandid) {
                     case PSEVDO_INSTR_ADD_LABLE:
                         if (lableTable[moduleidx].find(command.pseudoArg.stringBuffer) != lableTable[moduleidx].end()) {
-                            throw compilerError();
+                            throw linkerError();
                         }
                         
                         lableTable[moduleidx][command.pseudoArg.stringBuffer] = res.size();
 
+                        break;
+                    case PSEVDO_INSTR_EXT_LABLE:
+                        externedLables[moduleidx].push_back(command.pseudoArg.stringBuffer);
+                        break;
+                    case PSEVDO_INSTR_GLB_LABLE:
+                        newGlobalLables.push_back(command.pseudoArg.stringBuffer);
                         break;
                     default:
                         break;
@@ -259,6 +311,23 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                 }
             }
         }
+
+        for (const auto& globalLable : newGlobalLables) {
+            if (globalLables.find(globalLable) != globalLables.end()) throw linkerError(); // multi definition of global lables
+
+            globalLables[globalLable] = lableTable[moduleidx][globalLable];
+        }
+    }
+
+    for (size_t moduleidx = 0; moduleidx < modules.size(); moduleidx++) {
+        for (auto& externLable : externedLables[moduleidx]) {
+            if (lableTable[moduleidx].find(externLable) != lableTable[moduleidx].end()) 
+                throw linkerError();
+            if (globalLables.find(externLable) == globalLables.end())
+                throw linkerError();
+
+            lableTable[moduleidx][externLable] = globalLables[externLable];
+        }
     }
 
     res.clear();
@@ -285,7 +354,7 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                         for (auto offset : arg.constantOffset) currentOffset += offset;
                         for (auto lable : arg.nonconstantOffset) {
                             if (lableTable[moduleidx].find(lable.second) == lableTable[moduleidx].end()) {
-                                throw compilerError();
+                                throw linkerError();
                             }
 
                             currentOffset += lable.first * lableTable[moduleidx][lable.second];
@@ -299,7 +368,7 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                         for (auto offset : arg.constantOffset) currentOffset += offset;
                         for (auto lable : arg.nonconstantOffset) {
                             if (lableTable[moduleidx].find(lable.second) == lableTable[moduleidx].end()) {
-                                throw compilerError();
+                                throw linkerError();
                             }
 
                             currentOffset += lable.first * lableTable[moduleidx][lable.second];
@@ -314,6 +383,8 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
         }
     }
 
+    // looking for global start for start programm point
+    
     return res;
 }
 
@@ -323,5 +394,27 @@ std::vector<uint8_t> Assembly::compileFromTokens (const std::vector<TXTproc::Tok
     code = removeComments(code);
     code = removeTokens(code, {Token(" "), Token("\t"), Token("\r"), Token("\n")});
 
-    return linkModules({translateModuleFromTokens(code)});
+    try {
+        NotLinkedModule buf = translateModuleFromTokens(code);
+        return linkModules({buf});
+    } catch (const compilerError& err) {
+        size_t startTokenIdx = 0;
+        for (; code_[startTokenIdx].getLine() < err.getFailed().getLine(); startTokenIdx++) {}
+
+        std::string prefix = err.getFailed().filename() + "(" + std::to_string(err.getFailed().getLine()) 
+                           + ", " + std::to_string(err.getFailed().getColumn()) + "): ";
+        size_t messageOffset = prefix.length();
+        std::cout << prefix;
+
+        for (size_t i = startTokenIdx; code_[i].getLine() == err.getFailed().getLine() && i < code_.size(); i++) {
+            std::cerr << code_[i].content(); 
+        }
+
+        for (size_t i = 0; i < messageOffset + err.getFailed().getColumn(); i++) std::cerr << "~";
+        std::cerr << "^\n" << err.getMessage() << "\n";
+    } catch (std::length_error) {
+        // incorrect way to end the programm
+    }
+
+    return std::vector<uint8_t>();
 }

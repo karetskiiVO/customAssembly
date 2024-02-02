@@ -30,11 +30,14 @@ public:
 class Token {
     std::string content_;
     size_t line, column;
+    std::string filename_;
 public:
     static constexpr size_t UnknownPosition () { return (size_t)-1; }
 
-    Token (const std::string& content, size_t line = UnknownPosition(), size_t column = UnknownPosition());
-    Token (const char* ptr2content, size_t line = UnknownPosition(), size_t column = UnknownPosition());
+    Token (const std::string& content, size_t line = UnknownPosition(), 
+           size_t column = UnknownPosition(), const std::string& filename = "");
+    Token (const char* ptr2content, size_t line = UnknownPosition(), 
+           size_t column = UnknownPosition(), const std::string& filename = "");
 
     operator std::string ();
     operator const std::string () const;
@@ -44,6 +47,9 @@ public:
 
     std::string& content ();
     const std::string& content () const;
+
+    std::string& filename ();
+    const std::string& filename () const; 
 
     bool operator== (const Token& rhv) const;
     bool operator!= (const Token& rhv) const;

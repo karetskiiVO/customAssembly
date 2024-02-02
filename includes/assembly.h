@@ -26,8 +26,10 @@ enum InstructionID {
     INSTR_SYSCALL = 0xFF,
     INSTR_JMP = 0x11,
 
-    PSEVDO_INSTR_ADD_LABLE   =  0xF01,
-    PSEVDO_INSTR_PLACE_BYTES =  0xF02,
+    PSEVDO_INSTR_ADD_LABLE   = 0xF01,
+    PSEVDO_INSTR_PLACE_BYTES = 0xF02,
+    PSEVDO_INSTR_EXT_LABLE   = 0xF10,
+    PSEVDO_INSTR_GLB_LABLE   = 0xF11,
 };
 
 const std::vector<Opcode> assemblyOpcodes = 
