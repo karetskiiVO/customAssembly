@@ -16,6 +16,7 @@ enum Argtype {
     ARG_MEM = 0b100,
     ARG_VAR = ARG_REG | ARG_MEM,
     ARG_ANY = ARG_VAR | ARG_CST,
+    ARG_NMEM = ARG_CST | ARG_REG,
 };
 
 struct Opcode {

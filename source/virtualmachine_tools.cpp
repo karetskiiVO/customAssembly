@@ -65,6 +65,8 @@ void VirtualMachine::loadBinary (const std::vector<uint8_t>& bin, size_t start) 
     RSP = ramsize; // rsp also must be allocated in bin
 } 
 
+//extern "C" uint64_t getFlags();
+
 template <typename T>
 static void updateFlags (VirtualMachine& vm, T val) {
     auto& flags = vm.flags;
@@ -244,7 +246,7 @@ static void cmp (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip
         case 4:
             updateFlags(vm, *((uint32_t*)args[0]) - *((uint32_t*)args[1]));
             break;
-        case 8:
+        case 8: 
             updateFlags(vm, *((uint64_t*)args[0]) - *((uint64_t*)args[1]));
             break;
         default:
@@ -258,6 +260,21 @@ static void mov (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip
 
     if (args[0] == args[1]) return;
     memcpy(args[0], args[1], size);
+}
+
+static void push (VirtualMachine& vm, void** args, uint8_t, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+    memcpy(vm.ram + RSP - sizeof(uint64_t), args[0], sizeof(uint64_t));
+    RSP -= sizeof(uint64_t);
+}
+
+static void pop (VirtualMachine& vm, void** args, uint8_t, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+
+    memcpy(args[0], vm.ram + RSP, sizeof(uint64_t));
+    RSP += sizeof(uint64_t);
 }
 
 static void jmp (VirtualMachine& vm, void** args, uint8_t size, uint64_t) {
@@ -319,10 +336,14 @@ void VirtualMachine::run () {
             {Assembly::INSTR_CMP, cmp},
 
             {Assembly::INSTR_MOV, mov},
+            {Assembly::INSTR_PUSH, push},
+            {Assembly::INSTR_POP, pop},
+            
             {Assembly::INSTR_JMP, jmp},
 
             {Assembly::INSTR_JE , je},
             {Assembly::INSTR_JNE, jne},
+
 
             {Assembly::INSTR_RET , ret},
             {Assembly::INSTR_CALL, call},

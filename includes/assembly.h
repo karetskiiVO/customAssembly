@@ -33,7 +33,9 @@ enum InstructionID {
     INSTR_DEC = 0x0E,
     INSTR_CMP = 0x0F,
     
-    INSTR_MOV = 0x30,
+    INSTR_MOV  = 0x30,
+    INSTR_PUSH = 0x31,
+    INSTR_POP  = 0x32,
 
     INSTR_SYSCALL = 0xFF,
 
@@ -58,7 +60,10 @@ const std::vector<Opcode> assemblyOpcodes =
         { "inc", INSTR_INC, {ARG_VAR}},
         { "dec", INSTR_DEC, {ARG_VAR}},
         { "cmp", INSTR_CMP, {ARG_ANY, ARG_ANY}},
-        { "mov", INSTR_MOV, {ARG_VAR, ARG_ANY}},
+
+        { "mov", INSTR_MOV , {ARG_VAR, ARG_ANY}},
+        {"push", INSTR_PUSH, {ARG_NMEM}, false},
+        { "pop", INSTR_POP , {ARG_NMEM}, false},
 
         {"call", INSTR_CALL, {ARG_ANY}, false},
         { "ret", INSTR_RET ,        {}, false},
