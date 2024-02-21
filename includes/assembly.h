@@ -16,18 +16,32 @@ enum RegisterCodes {
     RCX_CODE = 0x02,
     RDX_CODE = 0x03,
 
+    RSI_CODE = 0x0C,
+    RDI_CODE = 0x0D,
+
     RSP_CODE = 0x3E,
     RIP_CODE = 0x3F,
 };
 
 enum InstructionID {
     INSTR_ADD = 0x00,
+    INSTR_SUB = 0x01,
+    INSTR_MUL = 0x02,
+    INSTR_DIV = 0x03,
+    
+    INSTR_INC = 0x0D, 
+    INSTR_DEC = 0x0E,
+    INSTR_CMP = 0x0F,
+    
     INSTR_MOV = 0x30,
+
     INSTR_SYSCALL = 0xFF,
 
     INSTR_CALL = 0x10,
     INSTR_RET = 0x11,
     INSTR_JMP = 0x12,
+    INSTR_JE  = 0x14,
+    INSTR_JNE = 0x15,
 
     PSEVDO_INSTR_ADD_LABLE   = 0xF01,
     PSEVDO_INSTR_PLACE_BYTES = 0xF02,
@@ -38,11 +52,20 @@ enum InstructionID {
 const std::vector<Opcode> assemblyOpcodes = 
     {
         { "add", INSTR_ADD, {ARG_VAR, ARG_ANY}},
+        { "sub", INSTR_DIV, {ARG_VAR, ARG_ANY}},
+        { "mul", INSTR_MUL, {ARG_VAR, ARG_ANY}},
+        { "div", INSTR_MUL, {ARG_VAR, ARG_ANY}},
+        { "inc", INSTR_INC, {ARG_VAR}},
+        { "dec", INSTR_DEC, {ARG_VAR}},
+        { "cmp", INSTR_CMP, {ARG_ANY, ARG_ANY}},
         { "mov", INSTR_MOV, {ARG_VAR, ARG_ANY}},
 
         {"call", INSTR_CALL, {ARG_ANY}, false},
         { "ret", INSTR_RET ,        {}, false},
         { "jmp", INSTR_JMP , {ARG_ANY}, false},
+
+        {  "je", INSTR_JE  , {ARG_ANY}, false},
+        { "jne", INSTR_JNE , {ARG_ANY}, false},
 
         { "syscall", INSTR_SYSCALL, {}, false},
     };
@@ -50,7 +73,8 @@ const std::vector<Register> assemblyRegisters =
     {
         {"rax", RAX_CODE}, {"rbx", RBX_CODE}, 
         {"rcx", RCX_CODE}, {"rdx", RDX_CODE},
-        {"rsp", RSP_CODE}, {"rip", RIP_CODE}
+        {"rdi", RDI_CODE}, {"rsi", RSI_CODE},
+        {"rsp", RSP_CODE}, {"rip", RIP_CODE},
     };
 
 struct Binary {

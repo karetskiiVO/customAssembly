@@ -65,6 +65,15 @@ void VirtualMachine::loadBinary (const std::vector<uint8_t>& bin, size_t start) 
     RSP = ramsize; // rsp also must be allocated in bin
 } 
 
+template <typename T>
+static void updateFlags (VirtualMachine& vm, T val) {
+    auto& flags = vm.flags;
+
+    SF = !!(val & ((T)1 << (T)(sizeof(T) - 1)));
+    ZF = !!val;
+    PF = !(val & (T)0b01);
+}
+
 static void add (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
     auto& registers = vm.registers;
     RIP = nextrip;
@@ -72,15 +81,171 @@ static void add (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip
     switch (size) {
         case 1:
             *((uint8_t*)args[0]) += *((uint8_t*)args[1]);
+            updateFlags(vm, *((uint8_t*)args[0]));
             break;
         case 2:
             *((uint16_t*)args[0]) += *((uint16_t*)args[1]);
+            updateFlags(vm, *((uint16_t*)args[0]));
             break;
         case 4:
             *((uint32_t*)args[0]) += *((uint32_t*)args[1]);
+            updateFlags(vm, *((uint32_t*)args[0]));
             break;
         case 8:
             *((uint64_t*)args[0]) += *((uint64_t*)args[1]);
+            updateFlags(vm, *((uint64_t*)args[0]));
+            break;
+        default:
+            break;
+    }
+}
+
+static void sub (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+
+    switch (size) {
+        case 1:
+            *((uint8_t*)args[0]) -= *((uint8_t*)args[1]);
+            updateFlags(vm, *((uint8_t*)args[0]));
+            break;
+        case 2:
+            *((uint16_t*)args[0]) -= *((uint16_t*)args[1]);
+            updateFlags(vm, *((uint16_t*)args[0]));
+            break;
+        case 4:
+            *((uint32_t*)args[0]) -= *((uint32_t*)args[1]);
+            updateFlags(vm, *((uint32_t*)args[0]));
+            break;
+        case 8:
+            *((uint64_t*)args[0]) -= *((uint64_t*)args[1]);
+            updateFlags(vm, *((uint64_t*)args[0]));
+            break;
+        default:
+            break;
+    }
+}
+
+static void mul (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+
+    switch (size) {
+        case 1:
+            *((uint8_t*)args[0]) *= *((uint8_t*)args[1]);
+            updateFlags(vm, *((uint8_t*)args[0]));
+            break;
+        case 2:
+            *((uint16_t*)args[0]) *= *((uint16_t*)args[1]);
+            updateFlags(vm, *((uint16_t*)args[0]));
+            break;
+        case 4:
+            *((uint32_t*)args[0]) *= *((uint32_t*)args[1]);
+            updateFlags(vm, *((uint32_t*)args[0]));
+            break;
+        case 8:
+            *((uint64_t*)args[0]) *= *((uint64_t*)args[1]);
+            updateFlags(vm, *((uint64_t*)args[0]));
+            break;
+        default:
+            break;
+    }
+}
+
+static void div_ (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+
+    switch (size) {
+        case 1:
+            *((uint8_t*)args[0]) /= *((uint8_t*)args[1]);
+            updateFlags(vm, *((uint8_t*)args[0]));
+            break;
+        case 2:
+            *((uint16_t*)args[0]) /= *((uint16_t*)args[1]);
+            updateFlags(vm, *((uint16_t*)args[0]));
+            break;
+        case 4:
+            *((uint32_t*)args[0]) /= *((uint32_t*)args[1]);
+            updateFlags(vm, *((uint32_t*)args[0]));
+            break;
+        case 8:
+            *((uint64_t*)args[0]) /= *((uint64_t*)args[1]);
+            updateFlags(vm, *((uint64_t*)args[0]));
+            break;
+        default:
+            break;
+    }
+}
+
+static void inc (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+
+    switch (size) {
+        case 1:
+            *((uint8_t*)args[0]) += 1;
+            updateFlags(vm, *((uint8_t*)args[0]));
+            break;
+        case 2:
+            *((uint16_t*)args[0]) += 1;
+            updateFlags(vm, *((uint16_t*)args[0]));
+            break;
+        case 4:
+            *((uint32_t*)args[0]) += 1;
+            updateFlags(vm, *((uint32_t*)args[0]));
+            break;
+        case 8:
+            *((uint64_t*)args[0]) += 1;
+            updateFlags(vm, *((uint64_t*)args[0]));
+            break;
+        default:
+            break;
+    }
+}
+
+static void dec (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+
+    switch (size) {
+        case 1:
+            *((uint8_t*)args[0]) -= 1;
+            updateFlags(vm, *((uint8_t*)args[0]));
+            break;
+        case 2:
+            *((uint16_t*)args[0]) -= 1;
+            updateFlags(vm, *((uint16_t*)args[0]));
+            break;
+        case 4:
+            *((uint32_t*)args[0]) -= 1;
+            updateFlags(vm, *((uint32_t*)args[0]));
+            break;
+        case 8:
+            *((uint64_t*)args[0]) -= 1;
+            updateFlags(vm, *((uint64_t*)args[0]));
+            break;
+        default:
+            break;
+    }
+}
+
+static void cmp (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    RIP = nextrip;
+
+    switch (size) {
+        case 1:
+            updateFlags(vm, *((uint8_t*)args[0]) - *((uint8_t*)args[1]));
+            break;
+        case 2:
+            updateFlags(vm, *((uint16_t*)args[0]) - *((uint16_t*)args[1]));
+            break;
+        case 4:
+            updateFlags(vm, *((uint32_t*)args[0]) - *((uint32_t*)args[1]));
+            break;
+        case 8:
+            updateFlags(vm, *((uint64_t*)args[0]) - *((uint64_t*)args[1]));
             break;
         default:
             break;
@@ -100,19 +265,6 @@ static void jmp (VirtualMachine& vm, void** args, uint8_t size, uint64_t) {
     memcpy(&RIP, args[0], size);
 }
 
-static void syscall (VirtualMachine& vm, void**, uint8_t, uint64_t nextrip) {
-    auto& registers = vm.registers;
-    
-    if (RAX == 1) {
-        if (RBX == 1) {
-            std::cout << RDX;
-        }
-    }
-    if (RAX == 0) exit(0);
-
-    RIP = nextrip;
-}
-
 static void call (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
     auto& registers = vm.registers;
     memcpy(&RIP, args[0], size);
@@ -126,17 +278,56 @@ static void ret (VirtualMachine& vm, void**, uint8_t, uint64_t) {
     RSP += sizeof(uint64_t);
 }
 
+static void je (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    auto& flags = vm.flags;
+
+    if (!ZF) memcpy(&RIP, args[0], size);
+    else RIP = nextrip;
+}
+
+static void jne (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    auto& flags = vm.flags;
+
+    if (ZF) memcpy(&RIP, args[0], size);
+    else RIP = nextrip;
+}
+
+static void syscall (VirtualMachine& vm, void**, uint8_t, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    
+    if (RAX == 1) {
+        if (RBX == 1) {
+            std::cout << RDX;
+        }
+    }
+    if (RAX == 0) exit(0);
+
+    RIP = nextrip;
+}
+
 void VirtualMachine::run () {
     std::map<uint16_t, std::function<void(VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip)>> instructions = 
         {
             {Assembly::INSTR_ADD, add}, 
+            {Assembly::INSTR_SUB, sub},
+            {Assembly::INSTR_MUL, mul},
+            {Assembly::INSTR_DIV, div_},
+            {Assembly::INSTR_INC, inc},
+            {Assembly::INSTR_DEC, dec},
+            {Assembly::INSTR_CMP, cmp},
+
             {Assembly::INSTR_MOV, mov},
             {Assembly::INSTR_JMP, jmp},
 
+            {Assembly::INSTR_JE , je},
+            {Assembly::INSTR_JNE, jne},
+
             {Assembly::INSTR_RET , ret},
             {Assembly::INSTR_CALL, call},
-            
-            {Assembly::INSTR_SYSCALL, syscall},
+
+            {Assembly::INSTR_SYSCALL, syscall}
         };
     
     auto instrArgc = instructionArgc();
