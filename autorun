@@ -5,3 +5,7 @@ mv ./compiler ./../compiler
 mv  ./virtual_machine ./../delta_vm
 cd ./..
 #rm -r ./tmp
+
+#testing
+
+./autotest

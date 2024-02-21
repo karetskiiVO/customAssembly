@@ -57,10 +57,10 @@ VirtualMachine::~VirtualMachine () {
     delete[] ram;
 }
 
-void VirtualMachine::loadBinary (const std::vector<uint8_t>& bin) {
+void VirtualMachine::loadBinary (const std::vector<uint8_t>& bin, size_t start) {
     if (bin.size() > ramsize) throw std::length_error("Not enought space to load programm");
 
-    RIP = 0; // start lable in future
+    RIP = start; // start lable in future
     memcpy(ram, bin.data(), sizeof(uint8_t) * bin.size());
     RSP = ramsize; // rsp also must be allocated in bin
 } 

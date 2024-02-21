@@ -249,8 +249,8 @@ static void addToUintArray (std::vector<uint8_t>& array, const T& arg) {
     }
 }
 
-std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& modules) {
-    std::vector<uint8_t> res;
+Binary Assembly::linkModules (const std::vector<NotLinkedModule>& modules) {
+    Binary res;
 
     const uint16_t logSize[] = {0, 0, 1, 1, 
                                 2, 2, 2, 2, 3};
@@ -271,7 +271,7 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                             throw linkerError();
                         }
                         
-                        lableTable[moduleidx][command.pseudoArg.stringBuffer] = res.size();
+                        lableTable[moduleidx][command.pseudoArg.stringBuffer] = res.bin.size();
 
                         break;
                     case PSEVDO_INSTR_EXT_LABLE:
@@ -287,24 +287,24 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                 continue;
             }
 
-            addToUintArray(res, (uint16_t)(command.commandid | (logSize[command.size] << 14)));
+            addToUintArray(res.bin, (uint16_t)(command.commandid | (logSize[command.size] << 14)));
 
             for (const auto& arg : command.args) {
                 switch (arg.type) {
                     case ARG_REG:
-                        addToUintArray(res, (uint8_t)(arg.reg.regid | COMMAND_ARG_REG));
+                        addToUintArray(res.bin, (uint8_t)(arg.reg.regid | COMMAND_ARG_REG));
                         break;
                     case ARG_MEM:
                         // check for maximum register counter
-                        addToUintArray(res, (uint8_t)(arg.registers.size() | COMMAND_ARG_MEM));
+                        addToUintArray(res.bin, (uint8_t)(arg.registers.size() | COMMAND_ARG_MEM));
                         for (auto regPair : arg.registers) {
-                            addToUintArray(res, (uint8_t)(regPair.second.regid | (logSize[regPair.first] << 6)));
+                            addToUintArray(res.bin, (uint8_t)(regPair.second.regid | (logSize[regPair.first] << 6)));
                         }
-                        addToUintArray(res,  (int64_t)0);
+                        addToUintArray(res.bin,  (int64_t)0);
                         break;
                     case ARG_CST:
-                        addToUintArray(res, (uint8_t)COMMAND_ARG_CST);
-                        addToUintArray(res,  (int64_t)0);
+                        addToUintArray(res.bin, (uint8_t)COMMAND_ARG_CST);
+                        addToUintArray(res.bin,  (int64_t)0);
                         break;
                     default:
                         break;
@@ -314,6 +314,7 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
 
         for (const auto& globalLable : newGlobalLables) {
             if (globalLables.find(globalLable) != globalLables.end()) throw linkerError(); // multi definition of global lables
+            if (lableTable[moduleidx].find(globalLable) == lableTable[moduleidx].end()) throw linkerError(); // lable not defined
 
             globalLables[globalLable] = lableTable[moduleidx][globalLable];
         }
@@ -330,25 +331,25 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
         }
     }
 
-    res.clear();
+    res.bin.clear();
 
     for (size_t moduleidx = 0; moduleidx < modules.size(); moduleidx++) {
         const auto& currentModule = modules[moduleidx];
         for (const auto& command : currentModule.code) {
             if (command.isPseudo) continue;
             
-            addToUintArray(res, (uint16_t)(command.commandid | (logSize[command.size] << 14)));
+            addToUintArray(res.bin, (uint16_t)(command.commandid | (logSize[command.size] << 14)));
 
             for (const auto& arg : command.args) {
                 int64_t currentOffset = 0;
                 switch (arg.type) {
                     case ARG_REG:
-                        addToUintArray(res, (uint8_t)(arg.reg.regid | COMMAND_ARG_REG));
+                        addToUintArray(res.bin, (uint8_t)(arg.reg.regid | COMMAND_ARG_REG));
                         break;
                     case ARG_MEM:
-                        addToUintArray(res, (uint8_t)(arg.registers.size() | COMMAND_ARG_MEM));
+                        addToUintArray(res.bin, (uint8_t)(arg.registers.size() | COMMAND_ARG_MEM));
                         for (auto regPair : arg.registers) {
-                            addToUintArray(res, (uint8_t)(regPair.second.regid | (logSize[regPair.first] << 6)));
+                            addToUintArray(res.bin, (uint8_t)(regPair.second.regid | (logSize[regPair.first] << 6)));
                         }
 
                         for (auto offset : arg.constantOffset) currentOffset += offset;
@@ -360,10 +361,10 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                             currentOffset += lable.first * lableTable[moduleidx][lable.second];
                         }
 
-                        addToUintArray(res, currentOffset);
+                        addToUintArray(res.bin, currentOffset);
                         break;
                     case ARG_CST:
-                        addToUintArray(res, (uint8_t)COMMAND_ARG_CST);
+                        addToUintArray(res.bin, (uint8_t)COMMAND_ARG_CST);
                         
                         for (auto offset : arg.constantOffset) currentOffset += offset;
                         for (auto lable : arg.nonconstantOffset) {
@@ -374,7 +375,7 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
                             currentOffset += lable.first * lableTable[moduleidx][lable.second];
                         }
 
-                        addToUintArray(res, currentOffset);
+                        addToUintArray(res.bin, currentOffset);
                         break;
                     default:
                         break;
@@ -383,11 +384,36 @@ std::vector<uint8_t> Assembly::linkModules (const std::vector<NotLinkedModule>& 
         }
     }
 
-    // looking for global start for start programm point
-    
+    auto startIt = globalLables.find("start");
+    if (startIt == globalLables.end()) throw linkerError();
+    res.start = startIt->second;
+
     return res;
 }
 
+Binary Assembly::compileNoErrors (const std::vector<TXTproc::Text>& sources) {
+    std::vector<NotLinkedModule> modules;
+
+    for (auto& sourceCode : sources) {
+        const std::vector<Token> terminals = {
+            Token(" "), Token("\t"), Token("\n"), Token("\r"),
+            Token("+"), Token("-"), Token("*"), Token("/"), 
+            Token(":"), Token(";"), Token(","), Token("["), Token("]")
+        };
+
+        auto code_ = createTokens(sourceCode, terminals);
+
+        std::vector<TXTproc::Token> code;
+        code = removeTokens(code_, {Token("\r")});
+        code = removeComments(code);
+        code = removeTokens(code, {Token(" "), Token("\t"), Token("\r"), Token("\n")});
+
+        modules.push_back(translateModuleFromTokens(code));
+    }
+
+    return linkModules(modules);
+}
+/*
 std::vector<uint8_t> Assembly::compileFromTokens (const std::vector<TXTproc::Token>& code_) {
     std::vector<TXTproc::Token> code;
     code = removeTokens(code_, {Token("\r")});
@@ -412,9 +438,8 @@ std::vector<uint8_t> Assembly::compileFromTokens (const std::vector<TXTproc::Tok
 
         for (size_t i = 0; i < messageOffset + err.getFailed().getColumn(); i++) std::cerr << "~";
         std::cerr << "^\n" << err.getMessage() << "\n";
-    } catch (std::length_error) {
-        // incorrect way to end the programm
     }
 
     return std::vector<uint8_t>();
 }
+*/

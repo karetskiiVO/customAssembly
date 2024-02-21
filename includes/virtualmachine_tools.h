@@ -24,7 +24,7 @@ struct VirtualMachine {
     VirtualMachine (size_t ramsize = 32768);
     ~VirtualMachine();
 
-    void loadBinary (const std::vector<uint8_t>& bin);
+    void loadBinary (const std::vector<uint8_t>& bin, size_t start = 0);
 
     void run (); // may be frequency
 };

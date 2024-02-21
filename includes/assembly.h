@@ -50,8 +50,13 @@ const std::vector<Register> assemblyRegisters =
         {"rsp", RSP_CODE}, {"rip", RIP_CODE}
     };
 
+struct Binary {
+    size_t start = 0;
+    std::vector<uint8_t> bin;
+};
 
 NotLinkedModule translateModuleFromTokens (const std::vector<TXTproc::Token>& code);
-std::vector<uint8_t> linkModules (const std::vector<NotLinkedModule>& modules);
-std::vector<uint8_t> compileFromTokens (const std::vector<TXTproc::Token>& code_);
+Binary linkModules (const std::vector<NotLinkedModule>& modules);
+Binary compileNoErrors (const std::vector<TXTproc::Text>& source);
+//std::vector<uint8_t> compileFromTokens (const std::vector<TXTproc::Token>& code_);
 }
