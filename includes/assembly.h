@@ -24,7 +24,10 @@ enum InstructionID {
     INSTR_ADD = 0x00,
     INSTR_MOV = 0x30,
     INSTR_SYSCALL = 0xFF,
-    INSTR_JMP = 0x11,
+
+    INSTR_CALL = 0x10,
+    INSTR_RET = 0x11,
+    INSTR_JMP = 0x12,
 
     PSEVDO_INSTR_ADD_LABLE   = 0xF01,
     PSEVDO_INSTR_PLACE_BYTES = 0xF02,
@@ -37,11 +40,11 @@ const std::vector<Opcode> assemblyOpcodes =
         { "add", INSTR_ADD, {ARG_VAR, ARG_ANY}},
         { "mov", INSTR_MOV, {ARG_VAR, ARG_ANY}},
 
-        { "jmp", INSTR_JMP, {ARG_ANY}, false},
+        {"call", INSTR_CALL, {ARG_ANY}, false},
+        { "ret", INSTR_RET ,        {}, false},
+        { "jmp", INSTR_JMP , {ARG_ANY}, false},
 
         { "syscall", INSTR_SYSCALL, {}, false},
-
-
     };
 const std::vector<Register> assemblyRegisters = 
     {
@@ -58,5 +61,5 @@ struct Binary {
 NotLinkedModule translateModuleFromTokens (const std::vector<TXTproc::Token>& code);
 Binary linkModules (const std::vector<NotLinkedModule>& modules);
 Binary compileNoErrors (const std::vector<TXTproc::Text>& source);
-//std::vector<uint8_t> compileFromTokens (const std::vector<TXTproc::Token>& code_);
+Binary compile (const std::vector<TXTproc::Text>& sources);
 }

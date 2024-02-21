@@ -113,12 +113,29 @@ static void syscall (VirtualMachine& vm, void**, uint8_t, uint64_t nextrip) {
     RIP = nextrip;
 }
 
+static void call (VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip) {
+    auto& registers = vm.registers;
+    memcpy(&RIP, args[0], size);
+    memcpy(vm.ram + RSP - sizeof(uint64_t), &nextrip, sizeof(uint64_t));
+    RSP -= sizeof(uint64_t);
+}
+
+static void ret (VirtualMachine& vm, void**, uint8_t, uint64_t) {
+    auto& registers = vm.registers;
+    memcpy(&RIP, vm.ram + RSP, sizeof(uint64_t));
+    RSP += sizeof(uint64_t);
+}
+
 void VirtualMachine::run () {
     std::map<uint16_t, std::function<void(VirtualMachine& vm, void** args, uint8_t size, uint64_t nextrip)>> instructions = 
         {
             {Assembly::INSTR_ADD, add}, 
             {Assembly::INSTR_MOV, mov},
             {Assembly::INSTR_JMP, jmp},
+
+            {Assembly::INSTR_RET , ret},
+            {Assembly::INSTR_CALL, call},
+            
             {Assembly::INSTR_SYSCALL, syscall},
         };
     

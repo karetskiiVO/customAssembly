@@ -413,6 +413,17 @@ Binary Assembly::compileNoErrors (const std::vector<TXTproc::Text>& sources) {
 
     return linkModules(modules);
 }
+
+Binary Assembly::compile (const std::vector<TXTproc::Text>& sources) {
+    try {
+        return compileNoErrors(sources);
+    } catch (const compilerError& err) {
+        // TODO: do good error presentation
+        std::cout << err.getMessage() << err.getFailed().content() << "\n";
+    }
+
+    return Binary();
+}
 /*
 std::vector<uint8_t> Assembly::compileFromTokens (const std::vector<TXTproc::Token>& code_) {
     std::vector<TXTproc::Token> code;

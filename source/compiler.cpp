@@ -21,7 +21,7 @@ int main (int argc, char* argv[]) {
         src.push_back(text);
     }
     
-    auto prog = Assembly::compileNoErrors(src);
+    auto prog = Assembly::compile(src);
     size_t size = prog.bin.size();
 
     FILE* output = fopen("prog.bin", "wb");

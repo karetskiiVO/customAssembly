@@ -1,2 +1,2 @@
-./compiler  lib.txt input.txt
+./compiler input.txt lib.txt
 ./delta_vm
